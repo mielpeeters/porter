@@ -4,13 +4,13 @@
         <meta charset="UTF-8" />
         <link rel="stylesheet" href="styles.css" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Portfolio Creator</title>
+        <title>Porter</title>
         <script type="module" src="/main.js" defer></script>
     </head>
 
     <div class="container">
         <div id="title">
-            <h1>Welcome to Portfolio Creator</h1>
+            <h1>Welcome to <span class="rainbow">Porter</span></h1>
             <p>
                 This app allows you to add items to your portfolio website easily.
                 <br>
@@ -20,14 +20,20 @@
         <div id="columns">
             <div id="selects"> 
                 <form id="input-form">
+                    <p>1. Select the template <tt>HTML</tt> file.</p>
                     <button type="submit">Select Input</button>
                 </form>
 
                 <form id="decl-form">
+                    <p>2. Select the declaration <tt>TOML</tt> file.</p>
                     <button type="submit">Select Declaration</button>
                 </form>
 
                 <form id="output-form">
+                    <p>
+                        3. Select the output <tt>HTML</tt> file.<br> 
+                        <span style="font-size: 0.8em; font-weight:300;">Note: this will overwrite existing files.</span>
+                    </p>
                     <button type="submit">Select Output</button>
                 </form>
             </div>
