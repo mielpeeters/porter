@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" href="styles.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Portfolio Creator</title>
+        <script type="module" src="/main.js" defer></script>
+    </head>
+
+    <div class="container">
+        <div id="title">
+            <h1>Welcome to Portfolio Creator</h1>
+            <p>
+                This app allows you to add items to your portfolio website easily.
+                <br>
+                For information on how to create the required files, see <a href="https://github.com/mielpeeters/porter.wiki" target="_blank"> the wiki </a>.
+            </p>
+        </div>
+        <div id="columns">
+            <div id="selects"> 
+                <form id="input-form">
+                    <button type="submit">Select Input</button>
+                </form>
+
+                <form id="decl-form">
+                    <button type="submit">Select Declaration</button>
+                </form>
+
+                <form id="output-form">
+                    <button type="submit">Select Output</button>
+                </form>
+            </div>
+
+            <form id="create-form">
+                <button type="submit">Create Site</button>
+            </form>
+        </div>
+        <p id="response"></p>
+    </div>
+
+
+</html>
