@@ -104,10 +104,13 @@ button:hover {
 
     width: 100%;
     height: 70%;
+
+    margin-top: 15px;
 }
 
 #create-form {
     flex: 1;
+    margin-top: 25px;
     /* padding-left: 5%; */
 }
 

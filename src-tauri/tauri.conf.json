@@ -18,13 +18,17 @@
         "open": true
       },
       "dialog": {
+          "open": true,
+          "save": true
+      },
+      "notification": {
           "all": true
       }
     },
     "bundle": {
       "active": true,
       "targets": ["deb"],
-      "identifier": ".mielpeeters.porter",
+      "identifier": "porter",
       "resources": ["data/"],
       "icon": [
         "icons/32x32.png",
@@ -41,9 +45,9 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "Portfolio Creator",
-        "width": 800,
-        "height": 600
+        "title": "Porter",
+        "width": 700,
+        "height": 550
       }
     ]
   }

@@ -19,7 +19,7 @@ enum Error {
     // problems with parsing the toml file
     ParseError,
     // couldn't find the required key
-    KeyError,
+    KeyError(String),
     // array has the wrong length
     WrongLength,
     // there was no colours array
@@ -29,9 +29,9 @@ enum Error {
     // should be an integer...
     NoInteger,
     // there was no images array
-    NoImages,
-    // thats not an image
-    NotAnImage,
+    NoImagesDir,
+    // wrong type
+    WrongType(String, String),
 }
 
 impl std::error::Error for Error {}
@@ -41,13 +41,15 @@ impl Display for Error {
         match self {
             Error::FileReadError => writeln!(f, "problems in reading files"),
             Error::ParseError => writeln!(f, "problems with parsing the toml file"),
-            Error::KeyError => writeln!(f, "couldn't find the required key"),
+            Error::KeyError(s1) => writeln!(f, "couldn't find key '{s1}'"),
             Error::WrongLength => writeln!(f, "array has the wrong length"),
             Error::NoColours => writeln!(f, "there was no colours array"),
             Error::NoRGB => writeln!(f, "there was no 3 colour values given"),
             Error::NoInteger => writeln!(f, "should be an integer..."),
-            Error::NoImages => writeln!(f, "there was no images array"),
-            Error::NotAnImage => writeln!(f, "thats not an image"),
+            Error::NoImagesDir => writeln!(f, "there was no images array"),
+            Error::WrongType(key, tpe) => {
+                writeln!(f, "Wrong type supplied for key {key}, should be {tpe}")
+            }
         }
     }
 }
@@ -83,7 +85,7 @@ fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), Error> {
         Some(val) => val.to_string(),
         None => match key {
             "measurements" => "-".to_string(),
-            _ => return Err(Error::KeyError),
+            _ => return Err(Error::KeyError(key.to_string())),
         },
     };
 
@@ -138,19 +140,19 @@ fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), Err
 
 fn insert_images(html: &mut String, item: &Table, data: &Data) -> Result<(), Error> {
     let Some(Value::Array(arr)) = item.get("images") else {
-        return Err(Error::NoImages)
+        return Ok(())
     };
 
     let sizes = ["320", "640", "960", "1290", "1920", "2560"];
     let mut images: Vec<String> = Vec::with_capacity(arr.len());
 
     let Some(Value::String(pre)) = item.get("images_dir") else {
-        return Err(Error::NoImages)
+        return Err(Error::NoImagesDir)
     };
 
     for image in arr {
         let Value::String(image_string) = image else {
-            return Err(Error::NotAnImage)
+            return Err(Error::WrongType("image".to_string(), "string".to_string()))
         };
 
         let Ok(mut image_html) = data.resource("image.html") else {

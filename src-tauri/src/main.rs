@@ -20,7 +20,7 @@ fn create_site(
 
     match response {
         Ok(_) => "The operation is done.".to_string(),
-        Err(err) => format!("{:?}", err),
+        Err(err) => format!("{}", err),
     }
 }
 

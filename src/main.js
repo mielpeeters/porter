@@ -1,5 +1,6 @@
 const { invoke } = window.__TAURI__.tauri;
 const { open, save } = window.__TAURI__.dialog;
+const { isPermissionGranted, requestPermission, sendNotification } = window.__TAURI__.notification;
 // import { open } from '@tauri-apps/api/dialog';
 
 let responseEl;
@@ -63,9 +64,17 @@ async function create_site() {
         } else {
             responseEl.textContent = e;    
         }
-        
+        return;
     }
 
+    let permissionGranted = await isPermissionGranted();
+    if (!permissionGranted) {
+        const permission = await requestPermission();
+        permissionGranted = permission === 'granted';
+    }
+    if (permissionGranted) {
+        sendNotification({ title: 'TAURI', body: 'Tauri is awesome!' });
+    }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
