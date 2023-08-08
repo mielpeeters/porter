@@ -1,13 +1,21 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::AppHandle;
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-fn create_site(input_file: &str, declaration_file: &str, output_file: &str) -> String {
+fn create_site(
+    input_file: &str,
+    declaration_file: &str,
+    output_file: &str,
+    app_handle: AppHandle,
+) -> String {
     let response = porter::declare::create_site(
         declaration_file.into(),
         input_file.into(),
         output_file.into(),
+        app_handle,
     );
 
     match response {

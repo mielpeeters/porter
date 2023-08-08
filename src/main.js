@@ -20,7 +20,7 @@ async function select_input() {
             extensions: ['html']
         }]
     });
-    responseEl.textContent = input;
+    responseEl.textContent = "Template selected";
 }
 
 async function select_decl() {
@@ -31,7 +31,7 @@ async function select_decl() {
             extensions: ['toml']
         }]
     });
-    responseEl.textContent = declare;
+    responseEl.textContent = "Declaration selected";
 }
 
 async function select_output() {
@@ -41,15 +41,31 @@ async function select_output() {
             extensions: ['html']
         }]
     });
-    responseEl.textContent = output;
+    responseEl.textContent = "Output selected";
 }
 
 async function create_site() {
-    responseEl.textContent = await invoke("create_site", { 
-        inputFile: input,
-        declarationFile: declare,
-        outputFile: output
-    });
+    try {
+        let cmd_output = await invoke("create_site", { 
+            inputFile: input,
+            declarationFile: declare,
+            outputFile: output
+        });
+        responseEl.textContent = cmd_output;
+    } catch (e) {
+        if (e.includes("inputFile")) {
+            responseEl.textContent = "Select a valid template file."
+        } else if (e.includes("declaration")) {
+            responseEl.textContent = "Select a valid declaration file."
+        } else if (e.includes("output")) {
+            // responseEl.textContent = "Select a valid output file."
+            responseEl.textContent = e;
+        } else {
+            responseEl.textContent = e;    
+        }
+        
+    }
+
 }
 
 window.addEventListener("DOMContentLoaded", () => {

@@ -4,9 +4,13 @@
 
 use std::{fmt::Display, fs, path::PathBuf};
 
+use tauri::AppHandle;
 use toml::{self, Table, Value};
 
-use crate::{data, html};
+use crate::{
+    data::{self, Data},
+    html,
+};
 
 #[derive(Debug)]
 enum Error {
@@ -74,7 +78,6 @@ fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), Error> {
         }
         Some(Value::String(val)) => {
             let res = markdown::to_html(val);
-            println!("{}", res);
             res
         }
         Some(val) => val.to_string(),
@@ -88,7 +91,7 @@ fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_colors(html: &mut String, item: &Table) -> Result<(), Error> {
+fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), Error> {
     let Some(Value::Array(arr)) = item.get("colours") else {
         return Err(Error::NoColours)
     };
@@ -121,7 +124,9 @@ fn insert_colors(html: &mut String, item: &Table) -> Result<(), Error> {
             _ => return Err(Error::NoRGB),
         };
 
-        let colourgrid_html = data::colordrid();
+        let Ok(colourgrid_html) = data.resource("colorgrid.html") else {
+            return Err(Error::FileReadError)
+        };
         let colourgrid_html = colourgrid_html.replace("COLOR", &colour_string);
 
         colours.push(colourgrid_html);
@@ -131,7 +136,7 @@ fn insert_colors(html: &mut String, item: &Table) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_images(html: &mut String, item: &Table) -> Result<(), Error> {
+fn insert_images(html: &mut String, item: &Table, data: &Data) -> Result<(), Error> {
     let Some(Value::Array(arr)) = item.get("images") else {
         return Err(Error::NoImages)
     };
@@ -148,7 +153,9 @@ fn insert_images(html: &mut String, item: &Table) -> Result<(), Error> {
             return Err(Error::NotAnImage)
         };
 
-        let mut image_html = data::image();
+        let Ok(mut image_html) = data.resource("image.html") else {
+            return Err(Error::FileReadError)
+        };
 
         image_html = image_html.replace(
             "PATH",
@@ -182,24 +189,27 @@ pub fn create_site(
     declaration: PathBuf,
     template: PathBuf,
     output: PathBuf,
+    handle: AppHandle,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let table = parse_toml(declaration)?;
     let mut page = html::open_template(template);
 
     let mut items: Vec<String> = Vec::with_capacity(table.keys().len());
 
-    for key in table.keys() {
-        println!("Inserting '{key}'");
+    let data_path = handle.path_resolver().resolve_resource("data").unwrap();
 
+    let data_handler = data::Data::new(data_path);
+
+    for key in table.keys() {
         let item = get_item(&table, key).expect("Should be able to get a table for this key...");
-        let mut item_html = data::item();
+        let mut item_html = data_handler.resource("item.html")?;
 
         item_html = item_html.replace("NAME", key);
         insert(&mut item_html, &item, "year")?;
         insert(&mut item_html, &item, "measurements")?;
         insert(&mut item_html, &item, "description")?;
-        insert_colors(&mut item_html, &item)?;
-        insert_images(&mut item_html, &item)?;
+        insert_colors(&mut item_html, &item, &data_handler)?;
+        insert_images(&mut item_html, &item, &data_handler)?;
 
         items.push(item_html.clone());
     }
