@@ -76,8 +76,9 @@ body {
 }
 
 button {
-    font-size: 1.2em;
+    font-size: 1.1em;
     height: 2em;
+    font-family: "Porter";
 
     transition-duration: 0.2s;
 
@@ -148,6 +149,8 @@ button:hover {
     border-radius: 10px;
     border-style: solid;
     transition-duration: 0.2s;
+
+    font-size: 1.3em;
 }
 
 #create-form button:hover {
