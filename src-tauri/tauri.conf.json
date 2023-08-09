@@ -14,14 +14,14 @@
     "allowlist": {
       "all": false,
       "shell": {
-        "all": false,
-        "open": true
+        "open": ".*"
       },
       "dialog": {
           "open": true,
-          "save": true
+          "save": true,
+          "ask": true
       },
-      "notification": {
+      "path": {
           "all": true
       }
     },

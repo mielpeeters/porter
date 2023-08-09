@@ -1,59 +1,77 @@
 const { invoke } = window.__TAURI__.tauri;
-const { open, save } = window.__TAURI__.dialog;
-const { isPermissionGranted, requestPermission, sendNotification } = window.__TAURI__.notification;
-// import { open } from '@tauri-apps/api/dialog';
+const { open, save, ask } = window.__TAURI__.dialog;
+const { homeDir } = window.__TAURI__.path;
+const { open: openFile } = window.__TAURI__.shell;
 
 let responseEl;
 let input;
 let declare;
 let output;
-
-// async function greet() {
-//   // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-//   greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
-// }
+let home = "";
 
 async function select_input() {
+    if (home === "") {
+        home = await homeDir()
+    }
+
     input = await open({
         multiple: false,
         filters: [{
             name: 'Html',
             extensions: ['html']
-        }]
+        }],
+        title: "Select Template File",
+        defaultPath: home
     });
+    responseEl.classList.remove("error");
     responseEl.textContent = "Template selected";
 }
 
 async function select_decl() {
+    if (home === "") {
+        home = await homeDir()
+    }
+    
     declare = await open({
         multiple: false,
         filters: [{
             name: 'TOML',
             extensions: ['toml']
-        }]
+        }],
+        defaultPath: home 
     });
+    responseEl.classList.remove("error");
     responseEl.textContent = "Declaration selected";
 }
 
 async function select_output() {
+    if (home === "") {
+        home = await homeDir()
+    }
+
     output = await save({
         filters: [{
             name: 'Html',
             extensions: ['html']
-        }]
+        }],
+        defaultPath: home
     });
+    responseEl.classList.remove("error");
     responseEl.textContent = "Output selected";
 }
 
 async function create_site() {
+    let cmd_output = "";
     try {
-        let cmd_output = await invoke("create_site", { 
+        cmd_output = await invoke("create_site", { 
             inputFile: input,
             declarationFile: declare,
             outputFile: output
         });
         responseEl.textContent = cmd_output;
+        responseEl.classList.remove("error");
     } catch (e) {
+        responseEl.classList.add("error");
         if (e.includes("inputFile")) {
             responseEl.textContent = "Select a valid template file."
         } else if (e.includes("declaration")) {
@@ -67,18 +85,18 @@ async function create_site() {
         return;
     }
 
-    let permissionGranted = await isPermissionGranted();
-    if (!permissionGranted) {
-        const permission = await requestPermission();
-        permissionGranted = permission === 'granted';
+    if (cmd_output.includes("Error")) {
+        responseEl.classList.add("error");
+        return;
     }
-    if (permissionGranted) {
-        sendNotification({ title: 'TAURI', body: 'Tauri is awesome!' });
+
+    if (await ask("Open the resulting file?", {title: "Result", cancelLabell: "no, thanks", okLabel: "yes, please!"})) {
+        await openFile(output);
     }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-    responseEl = document.querySelector("#response");
+    responseEl = document.querySelector(".response");
 
     document.querySelector("#create-form").addEventListener("submit", (e) => {
         e.preventDefault();

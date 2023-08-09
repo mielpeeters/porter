@@ -16,7 +16,7 @@ tauri-build = { version = "1.4", features = [] }
 strip = true
 
 [dependencies]
-tauri = { version = "1.4", features = [ "dialog-open", "dialog-save", "notification-all", "shell-open"] }
+tauri = { version = "1.4", features = [ "path-all", "dialog-ask", "dialog-open", "dialog-save", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 csv = "1.2.2"

@@ -32,6 +32,8 @@ enum Error {
     NoImagesDir,
     // wrong type
     WrongType(String, String),
+    // No ITEMS
+    NoItems,
 }
 
 impl std::error::Error for Error {}
@@ -39,16 +41,25 @@ impl std::error::Error for Error {}
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::FileReadError => writeln!(f, "problems in reading files"),
-            Error::ParseError => writeln!(f, "problems with parsing the toml file"),
-            Error::KeyError(s1) => writeln!(f, "couldn't find key '{s1}'"),
-            Error::WrongLength => writeln!(f, "array has the wrong length"),
-            Error::NoColours => writeln!(f, "there was no colours array"),
-            Error::NoRGB => writeln!(f, "there was no 3 colour values given"),
-            Error::NoInteger => writeln!(f, "should be an integer..."),
-            Error::NoImagesDir => writeln!(f, "there was no images array"),
+            Error::FileReadError => writeln!(f, "Error: problems in reading files"),
+            Error::ParseError => writeln!(f, "Error: problems with parsing the toml file"),
+            Error::KeyError(s1) => writeln!(f, "Error: couldn't find key '{s1}'"),
+            Error::WrongLength => writeln!(f, "Error: array has the wrong length"),
+            Error::NoColours => writeln!(f, "Error: there was no colours array"),
+            Error::NoRGB => writeln!(f, "Error: there was no 3 colour values given"),
+            Error::NoInteger => writeln!(f, "Error: should be an integer..."),
+            Error::NoImagesDir => writeln!(
+                f,
+                "Error: there was no images_dir supplied in the declaration"
+            ),
             Error::WrongType(key, tpe) => {
-                writeln!(f, "Wrong type supplied for key {key}, should be {tpe}")
+                writeln!(
+                    f,
+                    "Error: Wrong type supplied for key {key}, should be {tpe}"
+                )
+            }
+            Error::NoItems => {
+                writeln!(f, "Error: there is no occurrence of ITEMS in the template.")
             }
         }
     }
@@ -199,6 +210,7 @@ pub fn create_site(
     let mut items: Vec<String> = Vec::with_capacity(table.keys().len());
 
     let data_path = handle.path_resolver().resolve_resource("data").unwrap();
+    println!("Data path: {data_path:?}");
 
     let data_handler = data::Data::new(data_path);
 
@@ -216,7 +228,9 @@ pub fn create_site(
         items.push(item_html.clone());
     }
 
-    html::insert(&mut page, &items.as_slice(), "ITEMS").expect("Should be able to insert");
+    let Ok(_) = html::insert(&mut page, &items.as_slice(), "ITEMS") else {
+        return Err(Box::new(Error::NoItems))
+    };
 
     html::save(&page, output);
     Ok(())
