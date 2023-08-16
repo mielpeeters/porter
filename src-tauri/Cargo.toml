@@ -29,7 +29,10 @@ csv = "1.2.2"
 toml = "0.7.6"
 markdown = "1.0.0-alpha.11"
 webp = "0.2.5"
-image = "0.24.7"
+image = { version = "0.24.7", default-features = false, features = [
+    "jpeg",
+    "png",
+] }
 walkdir = "2"
 
 [features]
