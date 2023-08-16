@@ -9,11 +9,7 @@ use std::{
     path::PathBuf,
 };
 
-#[derive(Debug)]
-pub enum Error {
-    // no match found
-    NoMatch,
-}
+use crate::error::PorterError;
 
 pub fn open_template(template: PathBuf) -> String {
     let mut html = String::new();
@@ -25,10 +21,10 @@ pub fn open_template(template: PathBuf) -> String {
     html
 }
 
-pub fn insert(html: &mut String, entries: &[String], pattern: &str) -> Result<(), Error> {
+pub fn insert(html: &mut String, entries: &[String], pattern: &str) -> Result<(), PorterError> {
     for entry in entries {
         let Some(location) = html.find(pattern) else {
-            return Err(Error::NoMatch);
+            return Err(PorterError::NoMatch(pattern.to_string()));
         };
 
         // surround with newlines to result in nicer fotmatting

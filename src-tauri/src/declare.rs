@@ -2,86 +2,38 @@
 * Read the `TOML` declaration file and use html module to create the site.
 */
 
-use std::{fmt::Display, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use tauri::AppHandle;
 use toml::{self, Table, Value};
 
 use crate::{
     data::{self, Data},
+    error::PorterError,
     html,
 };
 
-#[derive(Debug)]
-enum Error {
-    // problems in reading files
-    FileReadError,
-    // problems with parsing the toml file
-    ParseError,
-    // couldn't find the required key
-    KeyError(String),
-    // array has the wrong length
-    WrongLength,
-    // there was no colours array
-    NoColours,
-    // there was no 3 colour values given
-    NoRGB,
-    // should be an integer...
-    NoInteger,
-    // there was no images array
-    NoImagesDir,
-    // wrong type
-    WrongType(String, String),
-    // No ITEMS
-    NoItems,
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::FileReadError => writeln!(f, "Error: problems in reading files"),
-            Error::ParseError => writeln!(f, "Error: problems with parsing the toml file"),
-            Error::KeyError(s1) => writeln!(f, "Error: couldn't find key '{s1}'"),
-            Error::WrongLength => writeln!(f, "Error: array has the wrong length"),
-            Error::NoColours => writeln!(f, "Error: there was no colours array"),
-            Error::NoRGB => writeln!(f, "Error: there was no 3 colour values given"),
-            Error::NoInteger => writeln!(f, "Error: should be an integer..."),
-            Error::NoImagesDir => writeln!(
-                f,
-                "Error: there was no images_dir supplied in the declaration"
-            ),
-            Error::WrongType(key, tpe) => {
-                writeln!(
-                    f,
-                    "Error: Wrong type supplied for key {key}, should be {tpe}"
-                )
-            }
-            Error::NoItems => {
-                writeln!(f, "Error: there is no occurrence of ITEMS in the template.")
-            }
-        }
-    }
-}
-
-fn parse_toml(path: PathBuf) -> Result<Table, Error> {
-    let string = match fs::read_to_string(path) {
+fn parse_toml(path: PathBuf) -> Result<Table, PorterError> {
+    let string = match fs::read_to_string(path.clone()) {
         Ok(string) => string,
-        Err(_) => return Err(Error::FileReadError),
+        Err(_) => {
+            return Err(PorterError::FileReadError(
+                path.to_str().unwrap().to_string(),
+            ))
+        }
     };
 
     match string.parse::<Table>() {
         Ok(table) => Ok(table),
-        Err(_) => Err(Error::ParseError),
+        Err(_) => Err(PorterError::ParseError),
     }
 }
 
-fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), Error> {
+fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), PorterError> {
     let value = match item.get(key) {
         Some(Value::Array(arr)) => {
             if arr.len() != 2 {
-                return Err(Error::WrongLength);
+                return Err(PorterError::WrongLength);
             }
             format!(
                 "{} <img src=\"images/icons/cross.svg\" width=\"8px\"> {}",
@@ -96,7 +48,7 @@ fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), Error> {
         Some(val) => val.to_string(),
         None => match key {
             "measurements" => "-".to_string(),
-            _ => return Err(Error::KeyError(key.to_string())),
+            _ => return Err(PorterError::KeyError(key.to_string())),
         },
     };
 
@@ -104,9 +56,9 @@ fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), Error> {
+fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), PorterError> {
     let Some(Value::Array(arr)) = item.get("colours") else {
-        return Err(Error::NoColours)
+        return Err(PorterError::NoColours)
     };
 
     let mut colours: Vec<String> = Vec::with_capacity(arr.len());
@@ -115,30 +67,30 @@ fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), Err
         let colour_string = match colour {
             Value::Array(clr) => {
                 if clr.len() != 3 {
-                    return Err(Error::NoRGB);
+                    return Err(PorterError::NoRGB);
                 }
                 let r = match clr[0] {
                     Value::Integer(i) => i as u8,
-                    _ => return Err(Error::NoInteger),
+                    _ => return Err(PorterError::NoInteger),
                 };
                 let g = match clr[1] {
                     Value::Integer(i) => i as u8,
-                    _ => return Err(Error::NoInteger),
+                    _ => return Err(PorterError::NoInteger),
                 };
                 let b = match clr[2] {
                     Value::Integer(i) => i as u8,
-                    _ => return Err(Error::NoInteger),
+                    _ => return Err(PorterError::NoInteger),
                 };
                 let nb: u32 = r as u32 * 256 * 256 + g as u32 * 256 + b as u32;
 
                 format!("#{:x}", nb)
             }
             Value::String(clr) => clr.clone(),
-            _ => return Err(Error::NoRGB),
+            _ => return Err(PorterError::NoRGB),
         };
 
         let Ok(colourgrid_html) = data.resource("colorgrid.html") else {
-            return Err(Error::FileReadError)
+            return Err(PorterError::FileReadError("colorgrid.html".to_string()))
         };
         let colourgrid_html = colourgrid_html.replace("COLOR", &colour_string);
 
@@ -149,7 +101,7 @@ fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), Err
     Ok(())
 }
 
-fn insert_images(html: &mut String, item: &Table, data: &Data) -> Result<(), Error> {
+fn insert_images(html: &mut String, item: &Table, data: &Data) -> Result<(), PorterError> {
     let Some(Value::Array(arr)) = item.get("images") else {
         return Ok(())
     };
@@ -158,16 +110,16 @@ fn insert_images(html: &mut String, item: &Table, data: &Data) -> Result<(), Err
     let mut images: Vec<String> = Vec::with_capacity(arr.len());
 
     let Some(Value::String(pre)) = item.get("images_dir") else {
-        return Err(Error::NoImagesDir)
+        return Err(PorterError::NoImagesDir)
     };
 
     for image in arr {
         let Value::String(image_string) = image else {
-            return Err(Error::WrongType("image".to_string(), "string".to_string()))
+            return Err(PorterError::WrongType("image".to_string(), "string".to_string()))
         };
 
         let Ok(mut image_html) = data.resource("image.html") else {
-            return Err(Error::FileReadError)
+            return Err(PorterError::FileReadError("image.html".to_string()))
         };
 
         image_html = image_html.replace(
@@ -229,7 +181,7 @@ pub fn create_site(
     }
 
     let Ok(_) = html::insert(&mut page, &items.as_slice(), "ITEMS") else {
-        return Err(Box::new(Error::NoItems))
+        return Err(Box::new(PorterError::NoItems))
     };
 
     html::save(&page, output);

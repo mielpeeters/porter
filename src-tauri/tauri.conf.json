@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "porter",
-    "version": "1.3.0"
+    "version": "2.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -36,7 +36,10 @@
         "icons/128x128@2x.png",
         "icons/icon.icns",
         "icons/icon.ico"
-      ]
+      ],
+      "category": "Utility",
+      "shortDescription": "An application that lets you update your website.",
+      "longDescription": "The application includes: \n- TOML to site: small declaration document to updated HTML file for the site\n- images conversion: from a directory of images to a directory of resized images in WEBP file format"
     },
     "security": {
       "csp": null
@@ -46,8 +49,8 @@
         "fullscreen": false,
         "resizable": true,
         "title": "Porter",
-        "width": 700,
-        "height": 550
+        "width": 800,
+        "height": 650
       }
     ]
   }

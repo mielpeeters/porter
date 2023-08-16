@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" href="styles.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Porter</title>
+        <script type="module" src="/images.js" defer></script>
+    </head>
+
+    <div class="container">
+        <div id="title">
+            <h1>Welcome to <span class="rainbow">Porter</span><span class="rainbow2">Image</span></h1>
+            <p>
+                For information on how to convert your images, see <a href="https://github.com/mielpeeters/porter/wiki" target="_blank"> the wiki </a>.
+            </p>
+        </div>
+        <div id="navigation">
+            <a href="index.html">click to go to main page</a>
+        </div>
+        <div id="columns">
+            <div id="selects">
+                <form id="input-form">
+                    <p>
+                        Select a folder of images to resize and convert to <tt>webp</tt>
+                    </p>
+                    <button type="submit">Image folder</button>
+                </form>
+                <form id="output-form">
+                    <p>
+                        Select "portfolio/images" folder.
+                    </p>
+                    <button type="submit">Output folder</button>
+                </form>
+            </div>
+
+            <div id="space"></div>
+
+            <form id="create-form">
+                <span><button type="submit">Convert Images!</button></span>
+            </form>
+        </div>
+        <div id="resp"><div class="response"><p></p></div></div>
+    </div>
+
+
+</html>

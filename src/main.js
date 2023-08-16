@@ -76,17 +76,9 @@ async function create_site() {
             responseEl.textContent = "Select a valid template file."
         } else if (e.includes("declaration")) {
             responseEl.textContent = "Select a valid declaration file."
-        } else if (e.includes("output")) {
-            // responseEl.textContent = "Select a valid output file."
-            responseEl.textContent = e;
         } else {
             responseEl.textContent = e;    
         }
-        return;
-    }
-
-    if (cmd_output.includes("Error")) {
-        responseEl.classList.add("error");
         return;
     }
 

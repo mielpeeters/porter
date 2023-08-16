@@ -66,13 +66,17 @@ body {
     margin-top: 9px;
 }
 
-#title a {
+a {
     color: #20b060;
     font-weight: 500;
 }
 
 .rainbow {
     color: #20b060;
+}
+
+.rainbow2 {
+    color: #018a3c;
 }
 
 button {
@@ -98,6 +102,7 @@ button:hover {
 #selects {
     flex: 3;
     flex-grow: 0;
+    flex-shrink: 0;
 
     display: flex;
     flex-direction: column;
@@ -132,9 +137,18 @@ button:hover {
     align-content: center;
 
     width: 100%;
-    height: 70%;
+}
 
-    margin-top: 15px;
+#navigation {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    align-content: center;
+
+    width: 100%;
 }
 
 #create-form {
@@ -162,12 +176,14 @@ button:hover {
 }
 
 #resp {
-    flex: 2;
+    flex: 3;
     width: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+
+    flex-shrink: 0;
 }
 
 .response {
@@ -189,4 +205,8 @@ button:hover {
 
 .error {
     color: #ffab96;
+}
+
+#space {
+    flex: 2;
 }
