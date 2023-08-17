@@ -4,8 +4,9 @@
 
 use std::{fs, path::PathBuf};
 
+use serde::Deserialize;
 use tauri::AppHandle;
-use toml::{self, Table, Value};
+use toml::{self, Value};
 
 use crate::{
     data::{self, Data},
@@ -13,7 +14,95 @@ use crate::{
     html,
 };
 
-fn parse_toml(path: PathBuf) -> Result<Table, PorterError> {
+#[derive(Deserialize, Debug)]
+struct Item {
+    name: String,
+    year: u32,
+    measurements: Option<(u32, u32)>,
+    images_dir: String,
+    images: Vec<String>,
+    colours: Vec<String>,
+    description: String,
+}
+
+impl Item {
+    fn to_html(&self, data_handler: &Data) -> Result<String, PorterError> {
+        let Ok(mut my_html) = data_handler.resource("item.html") else {
+            return Err(PorterError::FileReadError("item.html".to_string()))
+        };
+
+        let md = markdown::to_html(&self.description);
+        println!("md: {md}");
+
+        my_html = my_html.replace("NAME", &self.name);
+        my_html = my_html.replace("MEASUREMENTS", &self.html_measurements());
+        my_html = my_html.replace("YEAR", &self.year.to_string());
+        my_html = my_html.replace("DESCRIPTION", &md);
+        html::insert(&mut my_html, &self.html_images(data_handler)?, "IMAGES")?;
+        html::insert(&mut my_html, &self.html_colours(data_handler)?, "COLORGRID")?;
+        Ok(my_html)
+    }
+
+    fn html_measurements(&self) -> String {
+        match self.measurements {
+            Some(meas) => {
+                format!(
+                    "{} <img src=\"images/icons/cross.svg\" width=\"8px\"> {}",
+                    meas.0.to_string(),
+                    meas.1.to_string()
+                )
+            }
+            None => "-".to_string(),
+        }
+    }
+
+    fn html_images(&self, data_handler: &Data) -> Result<Vec<String>, PorterError> {
+        let sizes = ["320", "640", "960", "1290", "1920", "2560"];
+        let mut image_htmls: Vec<String> = Vec::with_capacity(self.images.len());
+
+        for image in self.images.as_slice() {
+            let Ok(mut image_html) = data_handler.resource("image.html") else {
+                return Err(PorterError::FileReadError("image.html".to_string()))
+            };
+
+            // replace default image size
+            image_html = image_html.replace(
+                "PATH",
+                format!("images/{}/resized/{}-2560.webp", self.images_dir, image).as_str(),
+            );
+
+            // fill in all of the different sizes
+            for size in sizes {
+                image_html = image_html.replace(
+                    format!("{}W", size).as_str(),
+                    format!("images/{}/resized/{}-{}.webp", self.images_dir, image, size).as_str(),
+                );
+            }
+
+            image_htmls.push(image_html);
+        }
+
+        Ok(image_htmls)
+    }
+
+    fn html_colours(&self, data_handler: &Data) -> Result<Vec<String>, PorterError> {
+        let mut colour_htmls: Vec<String> = Vec::with_capacity(self.colours.len());
+
+        for colour in self.colours.as_slice() {
+            let Ok(colourgrid_html) = data_handler.resource("colorgrid.html") else {
+                return Err(PorterError::FileReadError("colorgrid.html".to_string()))
+            };
+
+            let colourgrid_html = colourgrid_html.replace("COLOR", &colour);
+
+            colour_htmls.push(colourgrid_html);
+        }
+
+        Ok(colour_htmls)
+    }
+}
+
+fn parse_toml(path: PathBuf) -> Result<Vec<Item>, PorterError> {
     let string = match fs::read_to_string(path.clone()) {
         Ok(string) => string,
         Err(_) => {
@@ -23,131 +112,37 @@ fn parse_toml(path: PathBuf) -> Result<Table, PorterError> {
         }
     };
 
-    match string.parse::<Table>() {
-        Ok(table) => Ok(table),
-        Err(_) => Err(PorterError::ParseError),
-    }
-}
-
-fn insert(html: &mut String, item: &Table, key: &str) -> Result<(), PorterError> {
-    let value = match item.get(key) {
-        Some(Value::Array(arr)) => {
-            if arr.len() != 2 {
-                return Err(PorterError::WrongLength);
-            }
-            format!(
-                "{} <img src=\"images/icons/cross.svg\" width=\"8px\"> {}",
-                arr[0].to_string(),
-                arr[1].to_string()
-            )
-        }
-        Some(Value::String(val)) => {
-            let res = markdown::to_html(val);
-            res
-        }
-        Some(val) => val.to_string(),
-        None => match key {
-            "measurements" => "-".to_string(),
-            _ => return Err(PorterError::KeyError(key.to_string())),
-        },
+    let parsed: Result<Value, _> = toml::from_str(&string);
+    let parsed: Value = match parsed {
+        Err(err) => return Err(PorterError::ParseError(format!("{err}"))),
+        Ok(value) => value,
     };
 
-    html::insert(html, &[value], key.to_uppercase().as_str()).expect("Should be able to insert");
-    Ok(())
-}
-
-fn insert_colors(html: &mut String, item: &Table, data: &Data) -> Result<(), PorterError> {
-    let Some(Value::Array(arr)) = item.get("colours") else {
-        return Err(PorterError::NoColours)
+    let Some(table) = parsed.as_table() else {
+        return Err(PorterError::ParseError("Couldn't create TOML Table".to_string()))
     };
 
-    let mut colours: Vec<String> = Vec::with_capacity(arr.len());
+    let mut error: String = "".to_string();
 
-    for colour in arr {
-        let colour_string = match colour {
-            Value::Array(clr) => {
-                if clr.len() != 3 {
-                    return Err(PorterError::NoRGB);
+    let items: Vec<Item> = table
+        .values()
+        .filter_map(|item| {
+            let item: Result<Item, _> = item.clone().try_into();
+            match item {
+                Err(err) => {
+                    error = format!("{err}");
+                    None
                 }
-                let r = match clr[0] {
-                    Value::Integer(i) => i as u8,
-                    _ => return Err(PorterError::NoInteger),
-                };
-                let g = match clr[1] {
-                    Value::Integer(i) => i as u8,
-                    _ => return Err(PorterError::NoInteger),
-                };
-                let b = match clr[2] {
-                    Value::Integer(i) => i as u8,
-                    _ => return Err(PorterError::NoInteger),
-                };
-                let nb: u32 = r as u32 * 256 * 256 + g as u32 * 256 + b as u32;
-
-                format!("#{:x}", nb)
+                Ok(itm) => Some(itm),
             }
-            Value::String(clr) => clr.clone(),
-            _ => return Err(PorterError::NoRGB),
-        };
+        })
+        .collect();
 
-        let Ok(colourgrid_html) = data.resource("colorgrid.html") else {
-            return Err(PorterError::FileReadError("colorgrid.html".to_string()))
-        };
-        let colourgrid_html = colourgrid_html.replace("COLOR", &colour_string);
-
-        colours.push(colourgrid_html);
+    if !error.is_empty() {
+        return Err(PorterError::ParseError(format!("{error}")));
     }
 
-    html::insert(html, &colours, "COLORGRID").expect("Should be able to add colours");
-    Ok(())
-}
-
-fn insert_images(html: &mut String, item: &Table, data: &Data) -> Result<(), PorterError> {
-    let Some(Value::Array(arr)) = item.get("images") else {
-        return Ok(())
-    };
-
-    let sizes = ["320", "640", "960", "1290", "1920", "2560"];
-    let mut images: Vec<String> = Vec::with_capacity(arr.len());
-
-    let Some(Value::String(pre)) = item.get("images_dir") else {
-        return Err(PorterError::NoImagesDir)
-    };
-
-    for image in arr {
-        let Value::String(image_string) = image else {
-            return Err(PorterError::WrongType("image".to_string(), "string".to_string()))
-        };
-
-        let Ok(mut image_html) = data.resource("image.html") else {
-            return Err(PorterError::FileReadError("image.html".to_string()))
-        };
-
-        image_html = image_html.replace(
-            "PATH",
-            format!("images/{}/resized/{}-2560.webp", pre, image_string).as_str(),
-        );
-
-        for size in sizes {
-            image_html = image_html.replace(
-                format!("{}W", size).as_str(),
-                format!("images/{}/resized/{}-{}.webp", pre, image_string, size).as_str(),
-            );
-        }
-
-        images.push(image_html);
-    }
-
-    html::insert(html, &images, "IMAGES").expect("Should be able to add images.");
-
-    Ok(())
-}
-
-fn get_item(table: &Table, key: &str) -> Option<Table> {
-    let item = table.get(key)?;
-    match item {
-        Value::Table(tab) => Some(tab.clone()),
-        _ => None,
-    }
+    Ok(items)
 }
 
 pub fn create_site(
@@ -156,31 +151,26 @@ pub fn create_site(
     output: PathBuf,
     handle: AppHandle,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let table = parse_toml(declaration)?;
+    let items = parse_toml(declaration)?;
     let mut page = html::open_template(template);
 
-    let mut items: Vec<String> = Vec::with_capacity(table.keys().len());
+    let mut item_htmls: Vec<String> = Vec::with_capacity(items.len());
 
     let data_path = handle.path_resolver().resolve_resource("data").unwrap();
     println!("Data path: {data_path:?}");
 
     let data_handler = data::Data::new(data_path);
 
-    for key in table.keys() {
-        let item = get_item(&table, key).expect("Should be able to get a table for this key...");
-        let mut item_html = data_handler.resource("item.html")?;
+    for item in items {
+        let item_html = match item.to_html(&data_handler) {
+            Ok(result) => result,
+            Err(err) => return Err(Box::new(err)),
+        };
 
-        item_html = item_html.replace("NAME", key);
-        insert(&mut item_html, &item, "year")?;
-        insert(&mut item_html, &item, "measurements")?;
-        insert(&mut item_html, &item, "description")?;
-        insert_colors(&mut item_html, &item, &data_handler)?;
-        insert_images(&mut item_html, &item, &data_handler)?;
-
-        items.push(item_html.clone());
+        item_htmls.push(item_html.clone());
     }
 
-    let Ok(_) = html::insert(&mut page, &items.as_slice(), "ITEMS") else {
+    let Ok(_) = html::insert(&mut page, &item_htmls.as_slice(), "ITEMS") else {
         return Err(Box::new(PorterError::NoItems))
     };
 

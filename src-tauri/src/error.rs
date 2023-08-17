@@ -5,7 +5,7 @@ pub enum PorterError {
     // problems in reading files
     FileReadError(String),
     // problems with parsing the toml file
-    ParseError,
+    ParseError(String),
     // couldn't find the required key
     KeyError(String),
     // array has the wrong length
@@ -36,7 +36,9 @@ impl Display for PorterError {
             PorterError::FileReadError(file) => {
                 writeln!(f, "Error: problems in reading file {file}")
             }
-            PorterError::ParseError => writeln!(f, "Error: problems with parsing the toml file"),
+            PorterError::ParseError(reason) => {
+                writeln!(f, "Error: TOML Parse error: {reason}")
+            }
             PorterError::KeyError(s1) => writeln!(f, "Error: couldn't find key '{s1}'"),
             PorterError::WrongLength => writeln!(f, "Error: array has the wrong length"),
             PorterError::NoColours => writeln!(f, "Error: there was no colours array"),
