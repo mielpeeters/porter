@@ -1,8 +1,5 @@
 name: Publish_v3
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
